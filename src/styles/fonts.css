@@ -1,0 +1,12 @@
+/* Computer Modern font classes */
+.font-cm-serif {
+  font-family: "Computer Modern Serif", serif;
+}
+
+.font-cm-sans {
+  font-family: "Computer Modern Sans", sans-serif;
+}
+
+.font-cm-typewriter {
+  font-family: "Computer Modern Typewriter", monospace;
+} 
