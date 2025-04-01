@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 export interface Paper {
-  id: number;
+  id: string;
   title: string;
   authors: string;
   abstract: string;
@@ -59,10 +59,7 @@ export async function getRandomPairOfPapers(): Promise<Paper[]> {
 }
 
 export async function updateEloRatings(winnerId: string, loserId: string): Promise<void> {
-  await axios.post('/api/papers/elo', { 
-    winnerId: parseInt(winnerId, 10), 
-    loserId: parseInt(loserId, 10) 
-  });
+  await axios.post('/api/papers/elo', { winnerId, loserId });
 }
 
 export async function getTopPapers(limit: number = 10): Promise<Paper[]> {

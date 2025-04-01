@@ -33,10 +33,10 @@ export default function Home() {
     }).format(date);
   }
 
-  async function handleChoice(winnerId: number) {
+  async function handleChoice(winnerId: string) {
     const loserId = papers.find(p => p.id !== winnerId)?.id;
     if (loserId) {
-      await updateEloRatings(winnerId.toString(), loserId.toString());
+      await updateEloRatings(winnerId, loserId);
       await loadPapers();
     }
   }
@@ -75,7 +75,7 @@ export default function Home() {
                 </div>
                 <div className="mt-auto pt-6">
                   <button
-                    onClick={() => handleChoice(paper.id)}
+                    onClick={() => handleChoice(paper.id.toString())}
                     className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors duration-200 font-medium"
                   >
                     Choose This Paper
