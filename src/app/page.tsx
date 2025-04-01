@@ -4,57 +4,48 @@ import { useState, useEffect } from 'react';
 import { getRandomPairOfPapers, updateEloRatings, getTopPapers } from '@/utils/api';
 import type { Paper } from '@/utils/api';
 
-function formatDate(date: Date) {
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-}
-
 export default function Home() {
   const [papers, setPapers] = useState<Paper[]>([]);
   const [topPapers, setTopPapers] = useState<Paper[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadPapers();
   }, []);
 
   async function loadPapers() {
-    setLoading(true);
-    const [paper1, paper2] = await getRandomPairOfPapers();
-    setPapers([paper1, paper2]);
-    const top = await getTopPapers();
-    setTopPapers(top);
-    setLoading(false);
-  }
-
-  async function handleChoice(winnerId: string) {
-    const loserId = papers.find(p => p.id !== winnerId)?.id;
-    if (loserId) {
-      await updateEloRatings(winnerId, loserId);
-      await loadPapers();
+    try {
+      const [newPapers, newTopPapers] = await Promise.all([
+        getRandomPairOfPapers(),
+        getTopPapers()
+      ]);
+      setPapers(newPapers);
+      setTopPapers(newTopPapers);
+    } catch (error) {
+      console.error('Failed to load papers:', error);
     }
   }
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center text-gray-500">Loading...</div>
-        </div>
-      </div>
-    );
+  function formatDate(date: Date) {
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }).format(date);
+  }
+
+  async function handleChoice(winnerId: number) {
+    const loserId = papers.find(p => p.id !== winnerId)?.id;
+    if (loserId) {
+      await updateEloRatings(winnerId.toString(), loserId.toString());
+      await loadPapers();
+    }
   }
 
   return (
     <div className="min-h-screen bg-white">
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <h1 className="text-3xl font-bold text-gray-900 font-cm-serif">
-            <a href="https://www.quanta-app.com/" className="underline">Quanta</a> Paper Rankings
-          </h1>
+          <h1 className="text-3xl font-bold text-gray-900 font-cm-serif">ML Paper Rankings</h1>
           <p className="mt-2 text-sm text-gray-600">Where infinite scroll meets infinite knowledge</p>
         </div>
       </header>
@@ -128,7 +119,7 @@ export default function Home() {
       <footer className="bg-white border-t border-gray-200 mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <p className="text-center text-sm text-gray-500">
-            © {new Date().getFullYear()} Quanta Paper Rankings. All rights reserved.
+            © {new Date().getFullYear()} ML Paper Rankings. All rights reserved.
           </p>
         </div>
       </footer>
