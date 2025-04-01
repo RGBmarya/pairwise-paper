@@ -4,7 +4,7 @@ import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
 
 const prisma = new PrismaClient();
-const ARXIV_API_URL = 'http://export.arxiv.org/api/query';
+const ARXIV_API_URL = 'https://export.arxiv.org/api/query';
 
 interface ArxivAuthor {
   name: string;
@@ -34,23 +34,19 @@ function formatAuthors(author: ArxivAuthor | ArxivAuthor[]): string {
 async function fetchAndParsePapers() {
   const query = 'cat:cs.LG&sortBy=submittedDate&sortOrder=descending&maxResults=100';
   const response = await axios.get(`${ARXIV_API_URL}?search_query=${query}`);
-  const parser = new XMLParser();
+  const parser = new XMLParser({
+    ignoreAttributes: true,
+    isArray: (name) => name === 'author'
+  });
   const result = parser.parse(response.data) as ArxivResponse;
   
-  return result.feed.entry.map((entry: ArxivEntry) => {
-    const arxivId = entry.id.split('/').pop();
-    if (!arxivId) {
-      throw new Error('Invalid ArXiv ID');
-    }
-    return {
-      id: entry.id,
-      title: entry.title,
-      authors: formatAuthors(entry.author),
-      abstract: entry.summary,
-      arxivId,
-      published: entry.published,
-    };
-  });
+  return result.feed.entry.map((entry: ArxivEntry) => ({
+    title: entry.title,
+    authors: formatAuthors(entry.author),
+    abstract: entry.summary,
+    arxivId: entry.id.split('/').pop() || '',
+    published: entry.published,
+  }));
 }
 
 export async function GET() {
@@ -59,6 +55,8 @@ export async function GET() {
     if (papers.length < 2) {
       const newPapers = await fetchAndParsePapers();
       for (const paper of newPapers) {
+        if (!paper.arxivId) continue;
+        
         await prisma.paper.upsert({
           where: { arxivId: paper.arxivId },
           update: {},
