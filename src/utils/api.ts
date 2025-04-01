@@ -1,4 +1,17 @@
 import axios from 'axios';
+import { XMLParser } from 'fast-xml-parser';
+
+const API_BASE_URL = '/api/papers';
+
+export interface Paper {
+  id: number;
+  title: string;
+  authors: string;
+  abstract: string;
+  arxivId: string;
+  eloRating: number;
+  published: Date;
+}
 
 export interface ArxivPaper {
   id: string;
@@ -9,23 +22,19 @@ export interface ArxivPaper {
   published: Date;
 }
 
-export interface Paper extends ArxivPaper {
-  eloRating: number;
-}
-
 interface ApiPaper extends Omit<Paper, 'published'> {
   published: string;
 }
 
-const ARXIV_API_URL = 'http://export.arxiv.org/api/query';
-
 export async function fetchRecentMLPapers(): Promise<ArxivPaper[]> {
   const query = 'cat:cs.LG&sortBy=submittedDate&sortOrder=descending&maxResults=100';
-  const response = await axios.get(`${ARXIV_API_URL}?search_query=${query}`);
+  const response = await fetch(
+    `https://export.arxiv.org/api/query?search_query=${query}`
+  );
   
   // Parse XML response and convert to our format
   const parser = new DOMParser();
-  const xmlDoc = parser.parseFromString(response.data, 'text/xml');
+  const xmlDoc = parser.parseFromString(await response.text(), 'text/xml');
   const entries = xmlDoc.getElementsByTagName('entry');
   
   return Array.from(entries).map(entry => ({
