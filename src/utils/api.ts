@@ -1,7 +1,4 @@
 import axios from 'axios';
-import { XMLParser } from 'fast-xml-parser';
-
-const API_BASE_URL = '/api/papers';
 
 export interface Paper {
   id: number;
@@ -32,9 +29,15 @@ export async function fetchRecentMLPapers(): Promise<ArxivPaper[]> {
     `https://export.arxiv.org/api/query?search_query=${query}`
   );
   
+  if (!response.ok) {
+    throw new Error(`ArXiv API request failed with status ${response.status}`);
+  }
+
+  const text = await response.text();
+  
   // Parse XML response and convert to our format
   const parser = new DOMParser();
-  const xmlDoc = parser.parseFromString(await response.text(), 'text/xml');
+  const xmlDoc = parser.parseFromString(text, 'text/xml');
   const entries = xmlDoc.getElementsByTagName('entry');
   
   return Array.from(entries).map(entry => ({
