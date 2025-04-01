@@ -32,21 +32,26 @@ function formatAuthors(author: ArxivAuthor | ArxivAuthor[]): string {
 }
 
 async function fetchAndParsePapers() {
-  const query = 'cat:cs.LG&sortBy=submittedDate&sortOrder=descending&maxResults=100';
-  const response = await axios.get(`${ARXIV_API_URL}?search_query=${query}`);
-  const parser = new XMLParser({
-    ignoreAttributes: true,
-    isArray: (name) => name === 'author'
-  });
-  const result = parser.parse(response.data) as ArxivResponse;
-  
-  return result.feed.entry.map((entry: ArxivEntry) => ({
-    title: entry.title,
-    authors: formatAuthors(entry.author),
-    abstract: entry.summary,
-    arxivId: entry.id.split('/').pop() || '',
-    published: entry.published,
-  }));
+  try {
+    const query = 'cat:cs.LG&sortBy=submittedDate&sortOrder=descending&maxResults=100';
+    const response = await axios.get(`${ARXIV_API_URL}?search_query=${query}`);
+    const parser = new XMLParser({
+      ignoreAttributes: true,
+      isArray: (name) => name === 'author'
+    });
+    const result = parser.parse(response.data) as ArxivResponse;
+    
+    return result.feed.entry.map((entry: ArxivEntry) => ({
+      title: entry.title,
+      authors: formatAuthors(entry.author),
+      abstract: entry.summary,
+      arxivId: entry.id.split('/').pop() || '',
+      published: entry.published,
+    }));
+  } catch (error) {
+    console.error('Error fetching papers from ArXiv:', error);
+    throw error;
+  }
 }
 
 export async function GET() {
@@ -54,22 +59,33 @@ export async function GET() {
     const papers = await prisma.paper.findMany();
     if (papers.length < 2) {
       const newPapers = await fetchAndParsePapers();
+      const now = new Date();
+      
       for (const paper of newPapers) {
         if (!paper.arxivId) continue;
         
-        await prisma.paper.upsert({
-          where: { arxivId: paper.arxivId },
-          update: {},
-          create: {
-            title: paper.title,
-            authors: paper.authors,
-            abstract: paper.abstract,
-            arxivId: paper.arxivId,
-            published: new Date(paper.published),
-            eloRating: 1500,
-          },
-        });
+        try {
+          await prisma.paper.upsert({
+            where: { arxivId: paper.arxivId },
+            update: {},
+            create: {
+              title: paper.title,
+              authors: paper.authors,
+              abstract: paper.abstract,
+              arxivId: paper.arxivId,
+              eloRating: 1500,
+              published: new Date(paper.published),
+              createdAt: now,
+              updatedAt: now,
+            },
+          });
+        } catch (error) {
+          console.error('Error upserting paper:', error);
+          continue;
+        }
       }
+      
+      // Fetch papers again after creating them
       return GET();
     }
     
